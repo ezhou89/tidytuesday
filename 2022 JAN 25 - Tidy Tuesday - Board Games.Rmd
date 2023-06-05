@@ -1,0 +1,65 @@
+---
+title: "2022JAN25 - Tidy Tuesday - Board Games"
+author: "Eugene Zhou"
+date: "1/30/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The data this week comes from [Kaggle](https://www.kaggle.com/jvanelteren/boardgamegeek-reviews/version/3?select=2022-01-08.csv) by way of [Board Games Geek](https://www.boardgamegeek.com/), with a hattip to [David and Georgios ](https://github.com/rfordatascience/tidytuesday/issues/382#issuecomment-1020305849).
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(tidytuesdayR)
+```
+
+```{r}
+TTdata <- tidytuesdayR::tt_load('2022-01-25')
+View(TTdata)
+```
+
+```{r}
+# split data into separate tibbles
+mapply(assign, names(TTdata), TTdata, MoreArgs=list(envir = globalenv()))
+```
+
+```{r}
+details %>%
+  skimr::skim()
+```
+
+```{r}
+ratings %>% 
+  skimr::skim()
+```
+
+```{r}
+ratings %>% 
+  ggplot() +
+  aes(x = `average`) + 
+  geom_histogram() + 
+  labs(title = "Avg Rating of Board Games", 
+       x = "Avg Rating", 
+       y = "Number of Board Games")
+```
+
+Join both data sets by "id" 
+```{r}
+full_df <- inner_join(details, ratings, by = "id")
+```
+
+
+```{r}
+full_df %>% 
+  ggplot() + 
+  aes(x = boardgamecategory, y = average) + 
+  geom_col()
+```
+
+
+
+

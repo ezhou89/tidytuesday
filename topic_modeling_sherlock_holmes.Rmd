@@ -1,0 +1,139 @@
+---
+title: "Tidy Modeling - Topic Modeling"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## download data and prep
+
+```{r}
+library(gutenbergr)
+library(tidyverse)
+library(tidytext)
+```
+
+```{r}
+sherlock_raw <- gutenberg_download(1661)
+
+# new column to annotate text
+sherlock <- sherlock_raw %>% 
+  mutate(story = ifelse(str_detect(text, "ADVENTURE"), text, NA)) %>%
+  fill(story) %>%
+  filter(story != "THE ADVENTURES OF SHERLOCK HOLMES") %>%
+  mutate(story = factor(story, levels = unique(story)))
+```
+
+```{r}
+sherlock %>% count(story)
+```
+
+```{r}
+# create a word column to create tidy text data
+sherlock %>%
+  mutate(line = row_number()) %>%
+  unnest_tokens(word, text)
+```
+
+```{r}
+# create a word column to create tidy text data
+tidy_sherlock <- sherlock %>%
+  mutate(line = row_number()) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+```
+
+```{r}
+# explore tidy data
+tidy_sherlock %>% count(word, sort = TRUE)
+```
+
+```{r}
+# remove holmes from data
+tidy_sherlock <- sherlock %>%
+  mutate(line = row_number()) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  filter(word != "holmes")
+```
+
+```{r}
+tidy_sherlock %>% count(word, sort = TRUE)
+```
+
+## explore tf-idf
+
+```{r}
+tidy_sherlock %>%
+  count(story, word, sort = TRUE) %>%
+  bind_tf_idf(word, story, n) %>%
+  group_by(story) %>%
+  top_n(10) %>%
+  ungroup %>%
+  mutate(word = reorder(word, tf_idf)) %>%
+  ggplot() +
+  aes(x = word, y = tf_idf, fill = story) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~story, scales = "free") + 
+  coord_flip()
+```
+
+## topic modeling
+
+```{r}
+library(stm)
+library(quanteda)
+
+sherlock_dfm <- tidy_sherlock %>%
+  count(story, word, sort = TRUE) %>%
+  cast_dfm(story, word, n)
+```
+
+```{r}
+# 6 topic model
+topic_model <- stm(sherlock_dfm, K = 6, init.type = "Spectral")
+```
+
+```{r}
+# explore each topic
+summary(topic_model)
+```
+
+```{r}
+#beta matrix = what words contribute to each topic
+td_beta <- tidy(topic_model)
+```
+
+```{r}
+# which words contribute to each topic
+td_beta %>%
+  group_by(topic) %>%
+  top_n(10) %>%
+  ungroup %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot() + 
+  aes( x= term, y = beta, fill = topic) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~topic, scales = "free") + 
+  coord_flip()
+```
+
+```{r}
+td_gamma <- tidy(topic_model, matrix = "gamma", 
+                 document_names = rownames(sherlock_dfm))
+td_gamma
+```
+
+```{r}
+# plot probability of gamma matrix
+# how many stories belong in each topic
+td_gamma %>%
+  ggplot() + 
+  aes(x = gamma, fill = as.factor(topic)) + 
+  geom_histogram(show.legend = FALSE) + 
+  facet_wrap(~topic, ncol = 3)
+
+```
+

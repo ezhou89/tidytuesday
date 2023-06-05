@@ -1,0 +1,174 @@
+---
+title: "Untitled"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+## explore data
+
+```{r}
+# load data
+
+attendance <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/attendance.csv')
+standings <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/standings.csv')
+
+attendance_joined <- attendance %>% 
+  left_join(standings, 
+            by = c("year", "team_name", "team"))
+```
+
+```{r}
+# eda attendance
+attendance_joined %>%
+  filter(!is.na(weekly_attendance)) %>%
+  ggplot() + 
+  aes(x = fct_reorder(team_name, weekly_attendance), 
+      y = weekly_attendance, 
+      fill = playoffs) + 
+  geom_boxplot(outlier.alpha = 0.5) + 
+  coord_flip()
+```
+
+```{r}
+attendance_joined %>% 
+  distinct(team_name, year, margin_of_victory, playoffs) %>%
+  ggplot() + 
+  aes(x = margin_of_victory, fill = playoffs) + 
+  geom_histogram(position = "identity", alpha = 0.7)
+```
+
+```{r}
+attendance_joined %>%
+  mutate(week = factor(week)) %>%
+  ggplot() + 
+  aes(x = week, y = weekly_attendance, fill = week) +
+  geom_boxplot(show.legend = FALSE, outlier.alpha = 0.4)
+```
+
+```{r}
+attendance_df <- attendance_joined %>%
+  filter(!is.na(weekly_attendance)) %>%
+  select(weekly_attendance, team_name, year, week, 
+         margin_of_victory, strength_of_schedule, playoffs)
+
+attendance_df
+```
+
+## train model
+
+```{r}
+library(tidymodels)
+set.seed(1234)
+attendance_split <- attendance_df %>%
+  initial_split(strata = playoffs)
+
+nfl_train <- training(attendance_split)
+nfl_test <- testing(attendance_split)
+```
+
+```{r}
+lm_spec <- linear_reg() %>%
+  set_engine(engine = "lm")
+
+#fit everything in data set to be a predictor for weekly attendance using nfl_train data
+lm_fit <- lm_spec %>%
+  fit(weekly_attendance ~ ., 
+      data = nfl_train)
+```
+
+```{r}
+# random forest model
+rf_spec <- rand_forest(mode = "regression") %>%
+  set_engine("ranger")
+
+rf_fit <- rf_spec %>%
+  fit(weekly_attendance ~ ., 
+      data = nfl_train)
+```
+
+
+## evaluate model
+
+```{r}
+results_train <- lm_fit %>%
+  predict(new_data = nfl_train) %>%
+  mutate(truth = nfl_train$weekly_attendance, 
+         model = "lm") %>%
+  bind_rows(rf_fit %>%
+              predict(new_data = nfl_train) %>%
+              mutate(truth = nfl_train$weekly_attendance, 
+                     model = "rf"))
+
+results_test <- lm_fit %>%
+  predict(new_data = nfl_test) %>%
+  mutate(truth = nfl_test$weekly_attendance, 
+         model = "lm") %>%
+  bind_rows(rf_fit %>%
+              predict(new_data = nfl_test) %>%
+              mutate(truth = nfl_test$weekly_attendance, 
+                     model = "rf"))
+```
+
+```{r}
+results_train %>%
+  group_by(model) %>%
+  rmse(truth = truth, estimate = .pred)
+
+results_test %>%
+  group_by(model) %>%
+  rmse(truth = truth, estimate = .pred)
+```
+
+```{r}
+results_test %>%
+  mutate(train = "testing") %>%
+  bind_rows(results_train %>%
+              mutate(train = "training")) %>%
+  ggplot() + 
+  aes(x = truth, y = .pred, color = model) + 
+  geom_abline(lty = 2, size = 1.5) + 
+  geom_point(alpha = 0.5) +
+  facet_wrap(~train)
+```
+
+## try new model
+
+```{r}
+set.seed(1234)
+nfl_folds <- vfold_cv(nfl_train, strata = playoffs)
+nfl_folds
+
+# fit model on 9 folds and test on 10th fold
+
+rf_res <- fit_resamples(
+  weekly_attendance ~ ., 
+  rf_spec, 
+  nfl_folds, 
+  control = control_resamples(save_pred = TRUE)
+)
+
+rf_res %>%
+  collect_metrics()
+```
+
+```{r}
+rf_res %>%
+  unnest(.predictions) %>%
+  ggplot() + 
+  aes(weekly_attendance, .pred, color = id) + 
+  geom_abline(lty = 2, size = 1.5) + 
+  geom_point(alpha = 0.5)
+```
+
+
+
+
+
