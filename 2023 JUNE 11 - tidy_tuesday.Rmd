@@ -1,0 +1,372 @@
+---
+title: "2023 JUNE 06 - World Energy Consumption"
+date: 2023-06-06
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+------------------------------------------------------------------------
+
+The goal of this work is to apply my understanding of data towards real world projects using R and the tidyverse. The data used here is from the TidyTuesday project.
+
+## Check Out This Week's Data
+
+```{r Load , message=FALSE}
+# load R packages for analysis
+library(tidyverse)
+library(tidytuesdayR)
+```
+
+```{r, message=FALSE}
+# Download the weekly data and make available in the tt object.
+# Using the last_tuesday function gives us the latest TidyTuesday data from today's date
+
+tues <- last_tuesday("2023-06-06")
+
+tt <- tt_load(tues)
+```
+
+```{r, message=FALSE}
+# Check out the available data
+tt
+```
+
+The data this week comes from Our World in Data's [Energy Data Explorer](https://ourworldindata.org/explorers/energy). The complete data set is available via <https://github.com/owid/energy-data>.
+
+The complete Energy dataset is a collection of key metrics maintained by Our World in Data. It is updated regularly and includes data on energy consumption (primary energy, per capita, and growth rates), energy mix, electricity mix and other relevant metrics.
+
+This data has been collected, aggregated, and documented by Hannah Ritchie, Pablo Rosado, Edouard Mathieu, Max Roser.
+
+[Our World in Data](https://ourworldindata.org/about) makes data and research on the world's largest problems understandable and accessible.
+
+The following are the included variables:
+
+| **Variable**                                 | **Class** | **Description**                                                                                                                                         |
+|----------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| country                                      | character | Geographic location                                                                                                                                     |
+| year                                         | double    | Year of observation                                                                                                                                     |
+| iso_code                                     | character | ISO 3166-1 alpha-3 three-letter country codes                                                                                                           |
+| population                                   | double    | Population                                                                                                                                              |
+| gdp                                          | double    | Total real gross domestic product, inflation-adjusted                                                                                                   |
+| biofuel_cons_change_pct                      | double    | Annual percentage change in biofuel consumption                                                                                                         |
+| biofuel_cons_change_twh                      | double    | Annual change in biofuel consumption, measured in terawatt-hours                                                                                        |
+| biofuel_cons_per_capita                      | double    | Per capita primary energy consumption from biofuels, measured in kilowatt-hours                                                                         |
+| biofuel_consumption                          | double    | Primary energy consumption from biofuels, measured in terawatt-hours                                                                                    |
+| biofuel_elec_per_capita                      | double    | Per capita electricity generation from biofuels, measured in kilowatt-hours                                                                             |
+| biofuel_electricity                          | double    | Electricity generation from biofuels, measured in terawatt-hours                                                                                        |
+| biofuel_share_elec                           | double    | Share of electricity generation that comes from biofuels                                                                                                |
+| biofuel_share_energy                         | double    | Share of primary energy consumption that comes from biofuels                                                                                            |
+| carbon_intensity_elec                        | double    | Carbon intensity of electricity production, measured in grams of carbon dioxide emitted per kilowatt-hour                                               |
+| coal_cons_change_pct                         | double    | Annual percentage change in coal consumption                                                                                                            |
+| coal_cons_change_twh                         | double    | Annual change in coal consumption, measured in terawatt-hours                                                                                           |
+| coal_cons_per_capita                         | double    | Per capita primary energy consumption from coal, measured in kilowatt-hours                                                                             |
+| coal_consumption                             | double    | Primary energy consumption from coal, measured in terawatt-hours                                                                                        |
+| coal_elec_per_capita                         | double    | Per capita electricity generation from coal, measured in kilowatt-hours                                                                                 |
+| coal_electricity                             | double    | Electricity generation from coal, measured in terawatt-hours                                                                                            |
+| coal_prod_change_pct                         | double    | Annual percentage change in coal production                                                                                                             |
+| coal_prod_change_twh                         | double    | Annual change in coal production, measured in terawatt-hours                                                                                            |
+| coal_prod_per_capita                         | double    | Per capita coal production, measured in kilowatt-hours                                                                                                  |
+| coal_production                              | double    | Coal production, measured in terawatt-hours                                                                                                             |
+| coal_share_elec                              | double    | Share of electricity generation that comes from coal                                                                                                    |
+| coal_share_energy                            | double    | hare of primary energy consumption that comes from coal                                                                                                 |
+| electricity_demand                           | double    | Electricity demand, measured in terawatt-hours                                                                                                          |
+| electricity_generation                       | double    | Electricity generation, measured in terawatt-hours                                                                                                      |
+| electricity_share_energy                     | double    | Electricity generation as a share of primary energy                                                                                                     |
+| energy_cons_change_pct                       | double    | Annual percentage change in primary energy consumption                                                                                                  |
+| energy_cons_change_twh                       | double    | Annual change in primary energy consumption, measured in terawatt-hours                                                                                 |
+| energy_per_capita                            | double    | Primary energy consumption per capita, measured in kilowatt-hours                                                                                       |
+| energy_per_gdp                               | double    | Energy consumption per unit of GDP. This is measured in kilowatt-hours per 2011 international-\$                                                        |
+| fossil_cons_change_pct                       | double    | Annual percentage change in fossil fuel consumption                                                                                                     |
+| fossil_cons_change_twh                       | double    | Annual change in fossil fuel consumption, measured in terawatt-hours                                                                                    |
+| fossil_elec_per_capita                       | double    | Per capita electricity generation from fossil fuels, measured in kilowatt-hours. This is the sum of electricity generated from coal, oil and gas.       |
+| fossil_electricity                           | double    | Electricity generation from fossil fuels, measured in terawatt-hours. This is the sum of electricity generation from coal, oil and gas.                 |
+| fossil_energy_per_capita                     | double    | Per capita fossil fuel consumption, measured in kilowatt-hours. This is the sum of primary energy from coal, oil and gas.                               |
+| fossil_fuel_consumption                      | double    | Fossil fuel consumption, measured in terawatt-hours. This is the sum of primary energy from coal, oil and gas.                                          |
+| fossil_share_elec                            | double    | Share of electricity generation that comes from fossil fuels (coal, oil and gas combined)                                                               |
+| fossil_share_energy                          | double    | Share of primary energy consumption that comes from fossil fuels                                                                                        |
+| gas_cons_change_pct                          | double    | Annual percentage change in gas consumption                                                                                                             |
+| gas_cons_change_twh                          | double    | Annual change in gas consumption, measured in terawatt-hours                                                                                            |
+| gas_consumption                              | double    | Primary energy consumption from gas, measured in terawatt-hours                                                                                         |
+| gas_elec_per_capita                          | double    | Per capita electricity generation from gas, measured in kilowatt-hours                                                                                  |
+| gas_electricity                              | double    | Electricity generation from gas, measured in terawatt-hours                                                                                             |
+| gas_energy_per_capita                        | double    | Per capita primary energy consumption from gas, measured in kilowatt-hours                                                                              |
+| gas_prod_change_pct                          | double    | Annual percentage change in gas production                                                                                                              |
+| gas_prod_change_twh                          | double    | Annual change in gas production, measured in terawatt-hours                                                                                             |
+| gas_prod_per_capita                          | double    | Per capita gas production, measured in kilowatt-hours                                                                                                   |
+| gas_production                               | double    | Gas production, measured in terawatt-hours                                                                                                              |
+| gas_share_elec                               | double    | Share of electricity generation that comes from gas                                                                                                     |
+| gas_share_energy                             | double    | Share of primary energy consumption that comes from gas                                                                                                 |
+| greenhouse_gas_emissions                     | double    | Greenhouse-gas emissions produced in the generation of electricity, measured in million tonnes of CO2 equivalent                                        |
+| hydro_cons_change_pct                        | double    | Annual percentage change in hydropower consumption                                                                                                      |
+| hydro_cons_change_twh                        | double    | Annual change in hydropower consumption, measured in terawatt-hours                                                                                     |
+| hydro_consumption                            | double    | Primary energy consumption from hydropower, measured in terawatt-hours                                                                                  |
+| hydro_elec_per_capita                        | double    | Per capita electricity generation from hydropower, measured in kilowatt-hours                                                                           |
+| hydro_electricity                            | double    | Electricity generation from hydropower, measured in terawatt-hours                                                                                      |
+| hydro_energy_per_capita                      | double    | Per capita primary energy consumption from hydropower, measured in kilowatt-hours                                                                       |
+| hydro_share_elec                             | double    | Share of electricity generation that comes from hydropower                                                                                              |
+| hydro_share_energy                           | double    | Share of primary energy consumption that comes from hydropower                                                                                          |
+| low_carbon_cons_change_pct                   | double    | Annual percentage change in low-carbon energy consumption                                                                                               |
+| low_carbon_cons_change_twh                   | double    | Annual change in low-carbon energy consumption, measured in terawatt-hours                                                                              |
+| low_carbon_consumption                       | double    | Primary energy consumption from low-carbon sources, measured in terawatt-hours                                                                          |
+| low_carbon_elec_per_capita                   | double    | Per capita electricity generation from low-carbon sources, measured in kilowatt-hours                                                                   |
+| low_carbon_electricity                       | double    | Electricity generation from low-carbon sources, measured in terawatt-hours. This is the sum of electricity generation from renewables and nuclear power |
+| low_carbon_energy_per_capita                 | double    | Per capita primary energy consumption from low-carbon sources, measured in kilowatt-hours                                                               |
+| low_carbon_share_elec                        | double    | Share of electricity generation that comes from low-carbon sources. This is the sum of electricity from renewables and nuclear                          |
+| low_carbon_share_energy                      | double    | Share of primary energy consumption that comes from low-carbon sources. This is the sum of primary energy from renewables and nuclear                   |
+| net_elec_imports                             | double    | Net electricity imports, measured in terawatt-hours                                                                                                     |
+| net_elec_imports_share_demand                | double    | Net electricity imports as a share of electricity demand                                                                                                |
+| nuclear_cons_change_pct                      | double    | Annual percentage change in nuclear consumption                                                                                                         |
+| nuclear_cons_change_twh                      | double    | Annual change in nuclear consumption, measured in terawatt-hours                                                                                        |
+| nuclear_consumption                          | double    | Primary energy consumption from nuclear power, measured in terawatt-hours                                                                               |
+| nuclear_elec_per_capita                      | double    | Per capita electricity generation from nuclear power, measured in kilowatt-hours                                                                        |
+| nuclear_electricity                          | double    | Electricity generation from nuclear power, measured in terawatt-hours                                                                                   |
+| nuclear_energy_per_capita                    | double    | Per capita primary energy consumption from nuclear, measured in kilowatt-hours                                                                          |
+| nuclear_share_elec                           | double    | Share of electricity generation that comes from nuclear power                                                                                           |
+| nuclear_share_energy                         | double    | Share of primary energy consumption that comes from nuclear power                                                                                       |
+| oil_cons_change_pct                          | double    | Annual percentage change in oil consumption                                                                                                             |
+| oil_cons_change_twh                          | double    | Annual change in oil consumption, measured in terawatt-hours                                                                                            |
+| oil_consumption                              | double    | Primary energy consumption from oil, measured in terawatt-hours                                                                                         |
+| oil_elec_per_capita                          | double    | Per capita electricity generation from oil, measured in kilowatt-hours                                                                                  |
+| oil_electricity                              | double    | Electricity generation from oil, measured in terawatt-hours                                                                                             |
+| oil_energy_per_capita                        | double    | Per capita primary energy consumption from oil, measured in kilowatt-hours                                                                              |
+| oil_prod_change_pct                          | double    | Annual percentage change in oil production                                                                                                              |
+| oil_prod_change_twh                          | double    | Annual change in oil production, measured in terawatt-hours                                                                                             |
+| oil_prod_per_capita                          | double    | Per capita oil production, measured in kilowatt-hours                                                                                                   |
+| oil_production                               | double    | Oil production, measured in terawatt-hours                                                                                                              |
+| oil_share_elec                               | double    | Share of electricity generation that comes from oil                                                                                                     |
+| oil_share_energy                             | double    | Share of primary energy consumption that comes from oil                                                                                                 |
+| other_renewable_consumption                  | double    | Primary energy consumption from other renewables, measured in terawatt-hours                                                                            |
+| other_renewable_electricity                  | double    | Electricity generation from other renewable sources including biofuels, measured in terawatt-hours                                                      |
+| other_renewable_exc_biofuel_electricity      | double    | Electricity generation from other renewable sources excluding biofuels, measured in terawatt-hours                                                      |
+| other_renewables_cons_change_pct             | double    | Annual percentage change in energy consumption from other renewables                                                                                    |
+| other_renewables_cons_change_twh             | double    | Annual change in other renewable consumption, measured in terawatt-hours                                                                                |
+| other_renewables_elec_per_capita             | double    | Per capita electricity generation from other renewables including biofuels, measured in kilowatt-hours                                                  |
+| other_renewables_elec_per_capita_exc_biofuel | double    | Per capita electricity generation from other renewables excluding biofuels, measured in kilowatt-hours                                                  |
+| other_renewables_energy_per_capita           | double    | Per capita primary energy consumption from other renewables, measured in kilowatt-hours                                                                 |
+| other_renewables_share_elec                  | double    | Share of electricity generation that comes from other renewables including biofuels                                                                     |
+| other_renewables_share_elec_exc_biofuel      | double    | Share of electricity generation that comes from other renewables excluding biofuels                                                                     |
+| other_renewables_share_energy                | double    | Share of primary energy consumption that comes from other renewables                                                                                    |
+| per_capita_electricity                       | double    | Electricity generation per capita, measured in kilowatt-hours                                                                                           |
+| primary_energy_consumption                   | double    | Primary energy consumption, measured in terawatt-hours                                                                                                  |
+| renewables_cons_change_pct                   | double    | Annual percentage change in renewable energy consumption                                                                                                |
+| renewables_cons_change_twh                   | double    | Annual change in renewable energy consumption, measured in terawatt-hours                                                                               |
+| renewables_consumption                       | double    | Primary energy consumption from renewables, measured in terawatt-hours                                                                                  |
+| renewables_elec_per_capita                   | double    | Per capita electricity generation from renewables, measured in kilowatt-hours                                                                           |
+| renewables_electricity                       | double    | Electricity generation from renewables, measured in terawatt-hours                                                                                      |
+| renewables_energy_per_capita                 | double    | Per capita primary energy consumption from renewables, measured in kilowatt-hours                                                                       |
+| renewables_share_elec                        | double    | Share of electricity generation that comes from renewables                                                                                              |
+| renewables_share_energy                      | double    | Share of primary energy consumption that comes from renewables                                                                                          |
+| solar_cons_change_pct                        | double    | Annual percentage change in solar consumption                                                                                                           |
+| solar_cons_change_twh                        | double    | Annual change in solar consumption, measured in terawatt-hours                                                                                          |
+| solar_consumption                            | double    | Primary energy consumption from solar, measured in terawatt-hours                                                                                       |
+| solar_elec_per_capita                        | double    | Per capita electricity generation from solar, measured in kilowatt-hours                                                                                |
+| solar_electricity                            | double    | Electricity generation from solar, measured in terawatt-hours                                                                                           |
+| solar_energy_per_capita                      | double    | Per capita primary energy consumption from solar, measured in kilowatt-hours                                                                            |
+| solar_share_elec                             | double    | Share of electricity generation that comes from solar                                                                                                   |
+| solar_share_energy                           | double    | Share of primary energy consumption that comes from solar                                                                                               |
+| wind_cons_change_pct                         | double    | Annual percentage change in wind consumption                                                                                                            |
+| wind_cons_change_twh                         | double    | Annual change in wind consumption                                                                                                                       |
+| wind_consumption                             | double    | Primary energy consumption from wind, measured in terawatt-hours                                                                                        |
+| wind_elec_per_capita                         | double    | Per capita electricity generation from wind, measured in kilowatt-hours                                                                                 |
+| wind_electricity                             | double    | Electricity generation from wind, measured in terawatt-hours                                                                                            |
+| wind_energy_per_capita                       | double    | Per capita primary energy consumption from wind, measured in kilowatt-hours                                                                             |
+| wind_share_elec                              | double    | Share of electricity generation that comes from wind                                                                                                    |
+| wind_share_energy                            | double    | Share of primary energy consumption that comes from wind                                                                                                |
+
+## Initial Thoughts and Questions
+
+There are a ton of variables included in this set of data! Looks like most of the variables are some sort of numerical measurement, with a few character variables related to geography.
+
+Some basic EDA would be to look at:
+
+-   Which countries use the most energy?
+
+-   From which sources are these countries obtaining their energy?
+
+-   What is the energy mix of the countries with the greatest GDPs?
+
+-   Is there a correlation between
+
+## Data Wrangling and Exploratory Data Analysis
+
+Let's first check out how complete this data set looks using `skim`.
+
+```{r Extract}
+# Extract data from tt 
+energy <- tt$`owid-energy`
+
+energy %>% skimr::skim()
+```
+
+Looks like a lot of missing data, since the only 2 complete variables without missing observations are `country` and `year`. A deeper dive into the `year` variable shows that it ranges from 1900-2021. No wonder there so much missing data. Let's see if shortening this data set to only the last 20 years will help us out a bit.
+
+```{r}
+df1 <- energy %>%
+  filter(year > 2001)
+
+df1 %>% skimr::skim()
+```
+
+It still looks like we have a good chunk of missing data for some forms of energy, but that might not be too unexpected depending on the country.
+
+Since one of our earlier goals was to see what energy mix looked like for top GDP countries, let's truncate this data frame further by dropping countries that have missing GDP data.
+
+```{r}
+# filter for countries with GDP greater than 0
+df2 <- df1 %>%
+  filter(gdp > 0)
+```
+
+```{r}
+df2 %>% skimr::skim()
+```
+
+```{r}
+df2 %>%
+  group_by(year == 2018) %>%
+  group_by(country)
+
+```
+
+Luckily for us, the only variable that has missing data is `death_date`, because 12 of these individuals are currently alive. All other data is complete, making this a relatively straight forward and small set of data with 200 observations.
+
+Let's first tackle the question of which gender tends to live longer through a quick summary.
+
+```{r}
+# Group data by gender and count via summarize
+
+cent %>%
+  group_by(gender) %>%
+  summarise(n())
+
+```
+
+We see this data set collected 100 from each gender, suggesting we may not be able to determine which gender lives longer. However, we should be able to determine how much longer, on average, one gender lives compared to the other.
+
+```{r}
+cent %>%
+  group_by(gender) %>%
+  summarise(mean(age))
+```
+
+We see that the longest living women, on average, are still outliving the longest living men by 3.1 years.
+
+Next let's see if we can determine which countries have the most long-lived individuals.
+
+```{r}
+# Create a new data frame to explore which countries have the highest number of individuals
+
+df1 <- cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`No. of Individuals` = n(), 
+            `Avg Age` = mean(age),
+            `Shortest` = min(age),  
+            `Longest` = max(age)) 
+
+df1 %>% 
+  arrange(desc(`No. of Individuals`))
+```
+
+Oddly enough, it looks like the US has the greatest number of centenarians. How does that compare against the countries with the longest average lifespan? Which are the top 10 countries?
+
+```{r}
+cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age)) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`) %>%
+  arrange(desc(`Avg Age`)) %>%
+  head(n = 10)
+
+```
+
+According to the data, Jamaica has the highest average lifespan, which is unheard of from conventional knowledge. How is this possible? Let's double check how many individuals from these top countries are actually on this list.
+
+```{r}
+cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age), 
+            `No. of Individuals` = n()) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`, `No. of Individuals`) %>%
+  arrange(desc(`Avg Age`)) %>%
+  head(n = 10)
+```
+
+Looks like these n of 1 data points are acting more like outliers to drive up the average age. What if we filter out the countries that only have 1 individual?
+
+```{r}
+cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age), 
+            `No. of Individuals` = n()) %>%
+  filter(`No. of Individuals` > 1) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`, `No. of Individuals`) %>%
+  arrange(desc(`Avg Age`)) %>%
+  head(n = 10)
+```
+
+It's still very surprising to see that Brazil is now at the top of the list, as ranked by the average oldest recorded lifespans in descending order. However, we now see that Japan and the US is now included in the top 10, with Japan ranking higher than the US, as expected.
+
+Let's create a visualization that's essentially a heat map in the world map. To do so, we need to create a new data frame that contains the coordinates of the world map in addition to our centenarian data.
+
+```{r}
+# Load up the world map coordinates
+library(maps)
+world_map <- map_data("world")
+
+# Replace United States with USA to join the data sets
+cent$place_of_death_or_residence[cent$place_of_death_or_residence == "United States"] <- "USA"
+
+# Merge centanarian data with world coordinates into a new data frame
+df2 <- cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age), 
+            `No. of Individuals` = n()) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`, `No. of Individuals`) %>%
+  full_join(world_map, join_by("Country" == "region"))
+```
+
+Now we can visualize.
+
+```{r}
+ggplot(df2) +
+  geom_map(
+    dat = world_map, map = world_map, aes(map_id = region),
+    fill = "white", color = "black", size = 0.25
+  ) +
+  geom_map(map = world_map, aes(map_id = Country, fill = `No. of Individuals`), size = 0.25) +
+  scale_fill_gradient2(low = "white", high = "red", na.value = "white", name = "# of People") +
+  expand_limits(x = world_map$long, y = world_map$lat) + 
+  labs(title = "Countries with the Most Centenarians", 
+       y = "Latitude", 
+       x = "Longitude")
+```
+
+```{r, echo=FALSE, include=FALSE, message=FALSE}
+# Save image
+# This will save your most recent plot
+image <- ggplot(df2) +
+  geom_map(
+    dat = world_map, map = world_map, aes(map_id = region),
+    fill = "white", color = "black", size = 0.25
+  ) +
+  geom_map(map = world_map, aes(map_id = Country, fill = `No. of Individuals`), size = 0.25) +
+  scale_fill_gradient2(low = "white", high = "red", na.value = "white", name = "# of People") +
+  expand_limits(x = world_map$long, y = world_map$lat) + 
+  labs(title = "Countries with the Most Centenarians", 
+       y = "Latitude", 
+       x = "Longitude")
+
+image %>% ggsave(
+  filename = "map.png",
+  device = "png")
+
+```
+
+## Future Work
+
+1.  TBD

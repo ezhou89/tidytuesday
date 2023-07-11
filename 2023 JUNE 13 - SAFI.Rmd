@@ -1,0 +1,225 @@
+---
+title: "2023 JUN 13 - SAFI"
+date: 2023-06-13
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+------------------------------------------------------------------------
+
+The goal of this work is to apply my understanding of data towards real world projects using R and the tidyverse. The data used here is from the TidyTuesday project.
+
+## Check Out This Week's Data
+
+```{r Load , message=FALSE}
+# load R packages for analysis
+library(tidyverse)
+library(tidytuesdayR)
+```
+
+```{r, message=FALSE}
+# Download the weekly data and make available in the tt object.
+# Using the last_tuesday function gives us the latest TidyTuesday data from today's date
+
+tues <- last_tuesday()
+
+tt <- tt_load(tues)
+```
+
+```{r, message=FALSE}
+# Check out the available data
+tt
+```
+
+The data this week comes from the [SAFI (Studying African Farmer-Led Irrigation) survey](https://datacarpentry.org/socialsci-workshop/data/), a subset of the data used in the [Data Carpentry Social Sciences workshop](https://datacarpentry.org/socialsci-workshop/). So, if you're looking how to learn how to work with this data, lessons are already available! Data is available through [Figshare](https://figshare.com/articles/dataset/SAFI_Survey_Results/6262019).
+
+CITATION: Woodhouse, Philip; Veldwisch, Gert Jan; Brockington, Daniel; Komakech, Hans C.; Manjichi, Angela; Venot, Jean-Philippe (2018): SAFI Survey Results. <doi:10.6084/m9.figshare.6262019.v1>
+
+> SAFI (Studying African Farmer-Led Irrigation) is a currently running project which is looking at farming and irrigation methods. This is survey data relating to households and agriculture in Tanzania and Mozambique. The survey data was collected through interviews conducted between November 2016 and June 2017 using forms downloaded to Android Smartphones. The survey forms were created using the ODK (Open Data Kit) software via an Excel spreadsheet. The collected data is then sent back to a central server. The server can be used to download the collected data in both JSON and CSV formats. This is a teaching version of the collected data that we will be using. It is not the full dataset.
+
+> The survey covered such things as; household features (e.g. construction materials used, number of household members), agricultural practices (e.g. water usage), assets (e.g. number and types of livestock) and details about the household members.
+
+> The basic teaching dataset used in these lessons is a subset of the JSON dataset that has been converted into CSV format.
+
+### The following are the included variables:
+
+| **Variable**         | **Class** | **Description**                                                                                                                  |
+|----------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------|
+| key_ID               | integer   | Added to provide a unique Id for each observation. (The InstanceID field does this as well but it is not as convenient to use)   |
+| village              | character | Village name                                                                                                                     |
+| interview_date       | character | Date of interview                                                                                                                |
+| no_membrs            | integer   | Number of members in the household                                                                                               |
+| years_liv            | integer   | Number of years living in this village or a neighboring village                                                                  |
+| respondent_wall_type | character | Type of walls the house has                                                                                                      |
+| rooms                | integer   | Number of rooms in the main house used for sleeping                                                                              |
+| memb_assoc           | character | Are you a member of an irrigation association?                                                                                   |
+| affect_conflicts     | character | Have you been affected by conflicts with other irrigators in the area?                                                           |
+| liv_count            | integer   | Livestock count                                                                                                                  |
+| items_owned          | character | Items owned by the household                                                                                                     |
+| no_meals             | integer   | How many meals do people in your household normally eat in a day?                                                                |
+| months_lack_food     | character | Indicate which months, In the last 12 months have you faced a situation when you did not have enough food to feed the household? |
+| instanceID           | character | Unique identifier for the form data submission                                                                                   |
+
+## Initial Thoughts and Questions
+
+Based on the variables provided, the most obvious question to ask would be:
+
+-   Do the oldest individuals on the planet were living in the same general location or country?
+
+-   Who tends to live longer? Men or Women?
+
+From what I've previously heard regarding age statistics, Japan tends to have the longest life expectancy and women tend to live longer than men, so let's explore if that's still the case.
+
+## Data Wrangling and Exploratory Data Analysis
+
+Let's create a series of smaller data frames to explore whether these variables have some sort of relationship that we can further explore
+
+```{r Extract}
+# Extract data from tt 
+cent <- tt$centenarians
+
+cent %>% skimr::skim()
+```
+
+Luckily for us, the only variable that has missing data is `death_date`, because 12 of these individuals are currently alive. All other data is complete, making this a relatively straight forward and small set of data with 200 observations.
+
+Let's first tackle the question of which gender tends to live longer through a quick summary.
+
+```{r}
+# Group data by gender and count via summarize
+
+cent %>%
+  group_by(gender) %>%
+  summarise(n())
+
+```
+
+We see this data set collected 100 from each gender, suggesting we may not be able to determine which gender lives longer. However, we should be able to determine how much longer, on average, one gender lives compared to the other.
+
+```{r}
+cent %>%
+  group_by(gender) %>%
+  summarise(mean(age))
+```
+
+We see that the longest living women, on average, are still outliving the longest living men by 3.1 years.
+
+Next let's see if we can determine which countries have the most long-lived individuals.
+
+```{r}
+# Create a new data frame to explore which countries have the highest number of individuals
+
+df1 <- cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`No. of Individuals` = n(), 
+            `Avg Age` = mean(age),
+            `Shortest` = min(age),  
+            `Longest` = max(age)) 
+
+df1 %>% 
+  arrange(desc(`No. of Individuals`))
+```
+
+Oddly enough, it looks like the US has the greatest number of centenarians. How does that compare against the countries with the longest average lifespan? Which are the top 10 countries?
+
+```{r}
+cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age)) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`) %>%
+  arrange(desc(`Avg Age`)) %>%
+  head(n = 10)
+
+```
+
+According to the data, Jamaica has the highest average lifespan, which is unheard of from conventional knowledge. How is this possible? Let's double check how many individuals from these top countries are actually on this list.
+
+```{r}
+cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age), 
+            `No. of Individuals` = n()) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`, `No. of Individuals`) %>%
+  arrange(desc(`Avg Age`)) %>%
+  head(n = 10)
+```
+
+Looks like these n of 1 data points are acting more like outliers to drive up the average age. What if we filter out the countries that only have 1 individual?
+
+```{r}
+cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age), 
+            `No. of Individuals` = n()) %>%
+  filter(`No. of Individuals` > 1) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`, `No. of Individuals`) %>%
+  arrange(desc(`Avg Age`)) %>%
+  head(n = 10)
+```
+
+It's still very surprising to see that Brazil is now at the top of the list, as ranked by the average oldest recorded lifespans in descending order. However, we now see that Japan and the US is now included in the top 10, with Japan ranking higher than the US, as expected.
+
+Let's create a visualization that's essentially a heat map in the world map. To do so, we need to create a new data frame that contains the coordinates of the world map in addition to our centenarian data.
+
+```{r}
+# Load up the world map coordinates
+library(maps)
+world_map <- map_data("world")
+
+# Replace United States with USA to join the data sets
+cent$place_of_death_or_residence[cent$place_of_death_or_residence == "United States"] <- "USA"
+
+# Merge centanarian data with world coordinates into a new data frame
+df2 <- cent %>%
+  group_by(place_of_death_or_residence) %>%
+  summarise(`Avg Age` = mean(age), 
+            `No. of Individuals` = n()) %>%
+  transmute(`Country` = place_of_death_or_residence, `Avg Age`, `No. of Individuals`) %>%
+  full_join(world_map, join_by("Country" == "region"))
+```
+
+Now we can visualize.
+
+```{r}
+ggplot(df2) +
+  geom_map(
+    dat = world_map, map = world_map, aes(map_id = region),
+    fill = "white", color = "black", size = 0.25
+  ) +
+  geom_map(map = world_map, aes(map_id = Country, fill = `No. of Individuals`), size = 0.25) +
+  scale_fill_gradient2(low = "white", high = "red", na.value = "white", name = "# of People") +
+  expand_limits(x = world_map$long, y = world_map$lat) + 
+  labs(title = "Countries with the Most Centenarians", 
+       y = "Latitude", 
+       x = "Longitude")
+```
+
+```{r, echo=FALSE, include=FALSE, message=FALSE}
+# Save image
+# This will save your most recent plot
+image <- ggplot(df2) +
+  geom_map(
+    dat = world_map, map = world_map, aes(map_id = region),
+    fill = "white", color = "black", size = 0.25
+  ) +
+  geom_map(map = world_map, aes(map_id = Country, fill = `No. of Individuals`), size = 0.25) +
+  scale_fill_gradient2(low = "white", high = "red", na.value = "white", name = "# of People") +
+  expand_limits(x = world_map$long, y = world_map$lat) + 
+  labs(title = "Countries with the Most Centenarians", 
+       y = "Latitude", 
+       x = "Longitude")
+
+image %>% ggsave(
+  filename = "map.png",
+  device = "png")
+
+```
+
+## Future Work
+
+1.  TBD
